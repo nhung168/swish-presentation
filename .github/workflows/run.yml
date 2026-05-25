@@ -40,9 +40,7 @@ jobs:
           pulseaudio --start --log-target=syslog 2>/dev/null || true
           sleep 2
           echo "Installing Wine Mono..."
-          MONO_VER=$(curl -s https://api.github.com/repos/madewokherd/wine-mono/releases/latest \
-            | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'].lstrip('wine-mono-'))")
-          wget -q "https://github.com/madewokherd/wine-mono/releases/download/wine-mono-${MONO_VER}/wine-mono-${MONO_VER}-x86.msi" -O /tmp/wine-mono.msi
+          wget -q "https://dl.winehq.org/wine/wine-mono/9.1.0/wine-mono-9.1.0-x86.msi" -O /tmp/wine-mono.msi
           wine msiexec /i /tmp/wine-mono.msi /q > /tmp/mono.log 2>&1 || true
           echo "Mono install done."
           cp "${{ inputs.lesson }}.exe" "$HOME/lesson.exe"
