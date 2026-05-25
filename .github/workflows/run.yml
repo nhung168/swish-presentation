@@ -20,7 +20,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
-          sudo apt-get install -y wine wine32 xvfb x11vnc websockify netcat-openbsd x11-utils
+          sudo apt-get install -y wine wine32 xvfb x11vnc websockify netcat-openbsd x11-utils openbox
           curl -sL https://github.com/novnc/noVNC/archive/refs/tags/v1.5.0.tar.gz | tar xz -C /tmp
           sudo mv /tmp/noVNC-1.5.0 /opt/novnc
 
@@ -48,8 +48,10 @@ jobs:
           export DISPLAY=":2"
           export WINEPREFIX="$HOME/wine_swish"
           export WINEARCH="win32"
+          openbox &
+          sleep 2
           wine "C:\\lesson.exe" &
-          until pgrep -f "lesson.exe" >/dev/null 2>&1; do sleep 1; done
+          sleep 10
           x11vnc -display :2 -nopw -forever -noxdamage -listen 0.0.0.0 &
           until nc -z localhost 5900; do sleep 1; done
           websockify --web /opt/novnc 6080 localhost:5900 &
