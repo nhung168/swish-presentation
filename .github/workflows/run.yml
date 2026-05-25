@@ -4,24 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       lesson:
-        description: Lesson to run
+        description: "Lesson to run (F7BD04, F7BD05, F7BD06, F7BD07, F7BD10, F7BD11, F7BD12, F7BD13, F7BD14, F7BD15, F7BD16, F7BD17, F7BD18)"
         required: true
-        type: choice
         default: F7BD12
-        options:
-          - F7BD04
-          - F7BD05
-          - F7BD06
-          - F7BD07
-          - F7BD10
-          - F7BD11
-          - F7BD12
-          - F7BD13
-          - F7BD14
-          - F7BD15
-          - F7BD16
-          - F7BD17
-          - F7BD18
 
 jobs:
   run:
