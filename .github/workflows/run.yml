@@ -50,12 +50,23 @@ jobs:
             > "$WINEPREFIX/drive_c/windows/system32/Macromed/Flash/mms.cfg"
           cp "${{ inputs.lesson }}.exe" "$WINEPREFIX/drive_c/lesson.exe"
           echo "Launching exe..."
-          wine "C:\\lesson.exe" > /tmp/wine.log 2>&1 &
-          echo "Waiting up to 120s for Wine window..."
-          timeout 120 bash -c 'until xdotool search --onlyvisible --name "" 2>/dev/null | grep -q .; do sleep 2; done' || true
-          echo "--- Wine log ---"
+          WINEDEBUG="err+all,fixme-all" wine "C:\\lesson.exe" > /tmp/wine.log 2>&1 &
+          WINE_PID=$!
+          sleep 8
+          if kill -0 $WINE_PID 2>/dev/null; then
+            echo "Wine is running (PID $WINE_PID) — waiting for window..."
+          else
+            echo "Wine EXITED after 8s — likely crashed"
+          fi
+          echo "--- Wine log so far ---"
           cat /tmp/wine.log || true
           echo "--- End Wine log ---"
+          echo "--- Running Wine processes ---"
+          pgrep -la wine || echo "none"
+          echo "--- Visible windows ---"
+          xdotool search --onlyvisible --name "" 2>/dev/null || echo "none"
+          echo "--- End diagnostics ---"
+          timeout 60 bash -c 'until xdotool search --onlyvisible --name "" 2>/dev/null | grep -q .; do sleep 2; done' || true
           sleep 3
           xdotool search --onlyvisible --name "" 2>/dev/null | while read wid; do
             xdotool windowfocus "$wid" 2>/dev/null || true
