@@ -49,8 +49,15 @@ jobs:
           printf "OverrideGPUValidation=true\nDisableHardwareAcceleration=1\n" \
             > "$WINEPREFIX/drive_c/windows/system32/Macromed/Flash/mms.cfg"
           cp "${{ inputs.lesson }}.exe" "$WINEPREFIX/drive_c/lesson.exe"
+          FILE_SIZE=$(wc -c < "$WINEPREFIX/drive_c/lesson.exe")
+          echo "Lesson file size: $FILE_SIZE bytes"
+          if [ "$FILE_SIZE" -lt 1000000 ]; then
+            echo "ERROR: file is too small — likely an LFS pointer, not the real binary"
+            cat "$WINEPREFIX/drive_c/lesson.exe"
+            exit 1
+          fi
           echo "Launching exe..."
-          WINEDEBUG="err+all,fixme-all" wine "C:\\lesson.exe" > /tmp/wine.log 2>&1 &
+          WINEDEBUG="err+all,fixme-all" wine "$WINEPREFIX/drive_c/lesson.exe" > /tmp/wine.log 2>&1 &
           WINE_PID=$!
           sleep 8
           if kill -0 $WINE_PID 2>/dev/null; then
