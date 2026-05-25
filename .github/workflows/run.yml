@@ -83,12 +83,14 @@ jobs:
           xdotool search --onlyvisible --name "" 2>/dev/null || echo "none"
           echo "--- End diagnostics ---"
           timeout 60 bash -c 'until xdotool search --onlyvisible --name "" 2>/dev/null | grep -q .; do sleep 2; done' || true
-          sleep 3
+          echo "Waiting 20s for Flash to render..."
+          sleep 20
           xdotool search --onlyvisible --name "" 2>/dev/null | while read wid; do
             xdotool windowfocus "$wid" 2>/dev/null || true
+            xdotool windowraise "$wid" 2>/dev/null || true
           done
           echo "Starting VNC..."
-          x11vnc -display :2 -nopw -forever -noxdamage -listen 0.0.0.0 &
+          x11vnc -display :2 -nopw -forever -noxdamage -listen 0.0.0.0 -fixscreen rotate=0 &
           until nc -z localhost 5900; do sleep 1; done
           websockify --web /opt/novnc 6080 localhost:5900 &
           until nc -z localhost 6080; do sleep 1; done
