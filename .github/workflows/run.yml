@@ -19,15 +19,19 @@ jobs:
       - name: Install dependencies
         run: |
           sudo dpkg --add-architecture i386
+          sudo mkdir -pm755 /etc/apt/keyrings
+          sudo wget -qO /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key
+          sudo wget -qNP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources
           sudo apt-get update -qq
-          sudo apt-get install -y wine wine64 wine32:i386 xvfb x11vnc websockify netcat-openbsd x11-utils openbox xdotool
+          sudo apt-get install -y --install-recommends winehq-stable
+          sudo apt-get install -y xvfb x11vnc websockify netcat-openbsd x11-utils openbox xdotool
           curl -sL https://github.com/novnc/noVNC/archive/refs/tags/v1.5.0.tar.gz | tar xz -C /tmp
           sudo mv /tmp/noVNC-1.5.0 /opt/novnc
 
       - name: Setup Wine prefix and register Flash
         run: |
           export WINEPREFIX="$HOME/wine_swish"
-          export WINEARCH="win64"
+          export WINEARCH="win32"
           export DISPLAY=":99"
           Xvfb :99 -screen 0 1024x768x24 &
           until xdpyinfo -display :99 >/dev/null 2>&1; do sleep 1; done
@@ -47,7 +51,7 @@ jobs:
           until xdpyinfo -display :2 >/dev/null 2>&1; do sleep 1; done
           export DISPLAY=":2"
           export WINEPREFIX="$HOME/wine_swish"
-          export WINEARCH="win64"
+          export WINEARCH="win32"
           openbox &
           sleep 2
           wine "C:\\lesson.exe" &
