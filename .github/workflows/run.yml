@@ -1,0 +1,97 @@
+name: Run SWiSH Presentation
+
+on:
+  workflow_dispatch:
+    inputs:
+      lesson:
+        description: Lesson to run
+        required: true
+        type: choice
+        default: F7BD12
+        options:
+          - F7BD04
+          - F7BD05
+          - F7BD06
+          - F7BD07
+          - F7BD10
+          - F7BD11
+          - F7BD12
+          - F7BD13
+          - F7BD14
+          - F7BD15
+          - F7BD16
+          - F7BD17
+          - F7BD18
+
+jobs:
+  run:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo dpkg --add-architecture i386
+          sudo apt-get update -qq
+          sudo apt-get install -y wine wine32 xvfb x11vnc websockify novnc netcat-openbsd x11-utils
+
+      - name: Setup Wine prefix and register Flash
+        run: |
+          export WINEPREFIX="$HOME/wine_swish"
+          export WINEARCH="win32"
+          export DISPLAY=":99"
+          Xvfb :99 -screen 0 1024x768x24 &
+          until xdpyinfo -display :99 >/dev/null 2>&1; do sleep 1; done
+          mkdir -p "$WINEPREFIX/drive_c/windows/system32/Macromed/Flash"
+          cp Flash32_14_0_0_176.ocx "$WINEPREFIX/drive_c/windows/system32/Macromed/Flash/"
+          cp "${{ inputs.lesson }}.exe" "$WINEPREFIX/drive_c/lesson.exe"
+          DISPLAY=":99" wine regsvr32 /s "C:\\windows\\system32\\Macromed\\Flash\\Flash32_14_0_0_176.ocx"
+          printf "OverrideGPUValidation=true\nDisableHardwareAcceleration=1\n" \
+            > "$WINEPREFIX/drive_c/windows/system32/Macromed/Flash/mms.cfg"
+          pkill Xvfb || true
+
+      - name: Start presentation and VNC
+        run: |
+          Xvfb :2 -screen 0 1024x768x24 &
+          until xdpyinfo -display :2 >/dev/null 2>&1; do sleep 1; done
+          export DISPLAY=":2"
+          export WINEPREFIX="$HOME/wine_swish"
+          export WINEARCH="win32"
+          wine "C:\\lesson.exe" &
+          until pgrep -f "lesson.exe" >/dev/null 2>&1; do sleep 1; done
+          x11vnc -display :2 -nopw -forever -noxdamage -listen 0.0.0.0 &
+          until nc -z localhost 5900; do sleep 1; done
+          websockify --web /usr/share/novnc 6080 localhost:5900 &
+          until nc -z localhost 6080; do sleep 1; done
+          echo "VNC and noVNC started."
+
+      - name: Start ngrok and print URL
+        run: |
+          curl -sLo ngrok.tgz https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
+          tar xz -f ngrok.tgz
+          ./ngrok config add-authtoken ${{ secrets.NGROK_TOKEN }}
+          ./ngrok http 6080 --log /tmp/ngrok.log &
+          URL=""
+          for i in $(seq 1 20); do
+            URL=$(curl -s http://127.0.0.1:4040/api/tunnels 2>/dev/null \
+              | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['tunnels'][0]['public_url'])" 2>/dev/null || true)
+            [ -n "$URL" ] && break
+            sleep 2
+          done
+          if [ -z "$URL" ]; then
+            echo "ERROR: Could not get ngrok URL after 40 seconds."
+            cat /tmp/ngrok.log
+            exit 1
+          fi
+          echo ""
+          echo "============================================"
+          echo "  Lesson: ${{ inputs.lesson }}"
+          echo "  Open this URL in any browser:"
+          echo "  $URL/vnc.html?autoconnect=true"
+          echo "============================================"
+          echo ""
+
+      - name: Keep session alive (up to 6 hours)
+        run: sleep 21600
