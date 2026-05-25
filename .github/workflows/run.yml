@@ -116,7 +116,8 @@ jobs:
           echo "============================================"
           echo "  Lesson: ${{ inputs.lesson }}"
           echo "  Open this URL in any browser:"
-          echo "  $URL/vnc_lite.html?autoconnect=true"
+          echo "  Desktop: $URL/vnc_lite.html?autoconnect=true"
+          echo "  Mobile:  $URL/vnc.html?autoconnect=true&resize=scale&reconnect=true"
           echo "============================================"
           echo ""
 
