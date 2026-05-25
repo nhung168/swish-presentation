@@ -40,8 +40,15 @@ jobs:
           pulseaudio --start --log-target=syslog 2>/dev/null || true
           sleep 2
           export WINEDLLOVERRIDES="mscoree=d;mshtml=d"
-          mkdir -p "$HOME/wine_swish/drive_c"
-          cp "${{ inputs.lesson }}.exe" "$HOME/wine_swish/drive_c/lesson.exe"
+          echo "Initializing Wine prefix..."
+          timeout 30 wine cmd /c echo init > /dev/null 2>&1 || true
+          echo "Setting up Flash..."
+          mkdir -p "$WINEPREFIX/drive_c/windows/system32/Macromed/Flash"
+          cp Flash32_14_0_0_176.ocx "$WINEPREFIX/drive_c/windows/system32/Macromed/Flash/"
+          wine regsvr32 /s "C:\\windows\\system32\\Macromed\\Flash\\Flash32_14_0_0_176.ocx" > /dev/null 2>&1 || true
+          printf "OverrideGPUValidation=true\nDisableHardwareAcceleration=1\n" \
+            > "$WINEPREFIX/drive_c/windows/system32/Macromed/Flash/mms.cfg"
+          cp "${{ inputs.lesson }}.exe" "$WINEPREFIX/drive_c/lesson.exe"
           echo "Launching exe..."
           wine "C:\\lesson.exe" > /tmp/wine.log 2>&1 &
           echo "Waiting up to 120s for Wine window..."
