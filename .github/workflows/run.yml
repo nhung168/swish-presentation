@@ -19,10 +19,15 @@ jobs:
       - name: Install dependencies
         run: |
           sudo dpkg --add-architecture i386
+          sudo mkdir -pm755 /etc/apt/keyrings
+          sudo wget -qO /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key
+          sudo wget -qNP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources
           sudo apt-get update -qq
-          sudo apt-get install -y wine wine32:i386 xvfb x11vnc websockify netcat-openbsd x11-utils openbox xdotool
+          sudo apt-get install -y --install-recommends winehq-stable
+          sudo apt-get install -y xvfb x11vnc websockify netcat-openbsd x11-utils openbox xdotool
           curl -sL https://github.com/novnc/noVNC/archive/refs/tags/v1.5.0.tar.gz | tar xz -C /tmp
           sudo mv /tmp/noVNC-1.5.0 /opt/novnc
+          echo "Wine version: $(wine --version)"
 
       - name: Start presentation and VNC
         run: |
@@ -31,18 +36,16 @@ jobs:
           export DISPLAY=":2"
           export WINEPREFIX="$HOME/wine_swish"
           export WINEARCH="win32"
-          export WINEDEBUG="-all"
           openbox &
           sleep 2
-          echo "Pre-initializing Wine prefix..."
-          timeout 60 wine wineboot 2>/dev/null || true
-          sleep 5
-          mkdir -p "$WINEPREFIX/drive_c"
-          cp "${{ inputs.lesson }}.exe" "$WINEPREFIX/drive_c/lesson.exe"
+          cp "${{ inputs.lesson }}.exe" "$HOME/lesson.exe"
           echo "Launching exe..."
-          wine "$WINEPREFIX/drive_c/lesson.exe" &
-          echo "Waiting up to 60s for Wine window..."
-          timeout 60 bash -c 'until xdotool search --onlyvisible --name "" 2>/dev/null | grep -q .; do sleep 2; done' || true
+          wine "$HOME/lesson.exe" > /tmp/wine.log 2>&1 &
+          echo "Waiting up to 120s for Wine window..."
+          timeout 120 bash -c 'until xdotool search --onlyvisible --name "" 2>/dev/null | grep -q .; do sleep 2; done' || true
+          echo "--- Wine log ---"
+          cat /tmp/wine.log || true
+          echo "--- End Wine log ---"
           sleep 3
           xdotool search --onlyvisible --name "" 2>/dev/null | while read wid; do
             xdotool windowfocus "$wid" 2>/dev/null || true
