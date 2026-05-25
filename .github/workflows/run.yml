@@ -29,10 +29,12 @@ jobs:
           export DISPLAY=":99"
           Xvfb :99 -screen 0 1024x768x24 &
           until xdpyinfo -display :99 >/dev/null 2>&1; do sleep 1; done
+          DISPLAY=":99" wineboot -u
+          until DISPLAY=":99" wine cmd /c exit 0 >/dev/null 2>&1; do sleep 2; done
           mkdir -p "$WINEPREFIX/drive_c/windows/system32/Macromed/Flash"
           cp Flash32_14_0_0_176.ocx "$WINEPREFIX/drive_c/windows/system32/Macromed/Flash/"
           cp "${{ inputs.lesson }}.exe" "$WINEPREFIX/drive_c/lesson.exe"
-          DISPLAY=":99" wine regsvr32 /s "C:\\windows\\system32\\Macromed\\Flash\\Flash32_14_0_0_176.ocx"
+          DISPLAY=":99" wine regsvr32 /s "C:\\windows\\system32\\Macromed\\Flash\\Flash32_14_0_0_176.ocx" || true
           printf "OverrideGPUValidation=true\nDisableHardwareAcceleration=1\n" \
             > "$WINEPREFIX/drive_c/windows/system32/Macromed/Flash/mms.cfg"
           pkill Xvfb || true
