@@ -34,15 +34,15 @@ jobs:
           export WINEDEBUG="-all"
           openbox &
           sleep 2
-          echo "Wine version: $(wine --version)"
-          echo "Wine binary: $(which wine)"
-          ls -la /usr/bin/wine* || true
+          echo "Pre-initializing Wine prefix..."
+          timeout 60 wine wineboot 2>/dev/null || true
+          sleep 5
           mkdir -p "$WINEPREFIX/drive_c"
           cp "${{ inputs.lesson }}.exe" "$WINEPREFIX/drive_c/lesson.exe"
           echo "Launching exe..."
-          wine "$WINEPREFIX/drive_c/lesson.exe" 2>&1 | head -20 &
-          echo "Waiting up to 90s for Wine window..."
-          timeout 90 bash -c 'until xdotool search --onlyvisible --name "" 2>/dev/null | grep -q .; do sleep 2; done' || true
+          wine "$WINEPREFIX/drive_c/lesson.exe" &
+          echo "Waiting up to 60s for Wine window..."
+          timeout 60 bash -c 'until xdotool search --onlyvisible --name "" 2>/dev/null | grep -q .; do sleep 2; done' || true
           sleep 3
           xdotool search --onlyvisible --name "" 2>/dev/null | while read wid; do
             xdotool windowfocus "$wid" 2>/dev/null || true
