@@ -20,7 +20,7 @@ jobs:
         run: |
           sudo dpkg --add-architecture i386
           sudo apt-get update -qq
-          sudo apt-get install -y wine wine32 xvfb x11vnc websockify netcat-openbsd x11-utils openbox
+          sudo apt-get install -y wine wine32 xvfb x11vnc websockify netcat-openbsd x11-utils openbox xdotool
           curl -sL https://github.com/novnc/noVNC/archive/refs/tags/v1.5.0.tar.gz | tar xz -C /tmp
           sudo mv /tmp/noVNC-1.5.0 /opt/novnc
 
@@ -51,8 +51,12 @@ jobs:
           openbox &
           sleep 2
           wine "C:\\lesson.exe" &
-          sleep 10
-          x11vnc -display :2 -nopw -forever -noxdamage -listen 0.0.0.0 &
+          echo "Waiting for Wine window to appear..."
+          timeout 60 bash -c 'until xdotool search --onlyvisible --name "" 2>/dev/null | grep -q .; do sleep 2; done' || true
+          sleep 3
+          xdotool search --onlyvisible --name "" 2>/dev/null | while read wid; do xdotool windowfocus "$wid" 2>/dev/null; done || true
+          echo "Wine window ready."
+          x11vnc -display :2 -nopw -forever -noxdamage -listen 0.0.0.0 -repeat &
           until nc -z localhost 5900; do sleep 1; done
           websockify --web /opt/novnc 6080 localhost:5900 &
           until nc -z localhost 6080; do sleep 1; done
