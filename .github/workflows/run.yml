@@ -24,7 +24,7 @@ jobs:
           sudo wget -qNP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources
           sudo apt-get update -qq
           sudo apt-get install -y --install-recommends winehq-stable
-          sudo apt-get install -y xvfb x11vnc websockify netcat-openbsd x11-utils openbox xdotool pulseaudio
+          sudo apt-get install -y xvfb x11vnc websockify netcat-openbsd x11-utils openbox xdotool pulseaudio winetricks
           curl -sL https://github.com/novnc/noVNC/archive/refs/tags/v1.5.0.tar.gz | tar xz -C /tmp
           sudo mv /tmp/noVNC-1.5.0 /opt/novnc
           echo "Wine version: $(wine --version)"
@@ -39,13 +39,13 @@ jobs:
           openbox &
           pulseaudio --start --log-target=syslog 2>/dev/null || true
           sleep 2
-          echo "Installing Wine Mono..."
-          wget -q "https://dl.winehq.org/wine/wine-mono/9.1.0/wine-mono-9.1.0-x86.msi" -O /tmp/wine-mono.msi
-          wine msiexec /i /tmp/wine-mono.msi /q > /tmp/mono.log 2>&1 || true
+          echo "Installing Wine Mono via winetricks..."
+          WINEPREFIX="$HOME/wine_swish" WINEARCH="win32" winetricks -q mono 2>&1 | tail -5
           echo "Mono install done."
-          cp "${{ inputs.lesson }}.exe" "$HOME/lesson.exe"
+          mkdir -p "$HOME/wine_swish/drive_c"
+          cp "${{ inputs.lesson }}.exe" "$HOME/wine_swish/drive_c/lesson.exe"
           echo "Launching exe..."
-          wine "$HOME/lesson.exe" > /tmp/wine.log 2>&1 &
+          wine "C:\\lesson.exe" > /tmp/wine.log 2>&1 &
           echo "Waiting up to 120s for Wine window..."
           timeout 120 bash -c 'until xdotool search --onlyvisible --name "" 2>/dev/null | grep -q .; do sleep 2; done' || true
           echo "--- Wine log ---"
