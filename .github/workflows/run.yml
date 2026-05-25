@@ -26,7 +26,7 @@ jobs:
           sudo wget -qNP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources
           sudo apt-get update -qq
           sudo apt-get install -y --install-recommends winehq-stable
-          sudo apt-get install -y xvfb x11vnc websockify netcat-openbsd x11-utils openbox xdotool pulseaudio
+          sudo apt-get install -y xvfb x11vnc websockify netcat-openbsd x11-utils openbox xdotool pulseaudio fonts-dejavu fonts-liberation fonts-noto-core
           curl -sL https://github.com/novnc/noVNC/archive/refs/tags/v1.5.0.tar.gz | tar xz -C /tmp
           sudo mv /tmp/noVNC-1.5.0 /opt/novnc
           echo "Wine version: $(wine --version)"
@@ -50,6 +50,10 @@ jobs:
           wine regsvr32 /s "C:\\windows\\system32\\Macromed\\Flash\\Flash32_14_0_0_176.ocx" > /dev/null 2>&1 || true
           printf "OverrideGPUValidation=true\nDisableHardwareAcceleration=1\n" \
             > "$WINEPREFIX/drive_c/windows/system32/Macromed/Flash/mms.cfg"
+          echo "Installing Vietnamese-capable fonts..."
+          mkdir -p "$WINEPREFIX/drive_c/windows/Fonts"
+          find /usr/share/fonts -name "*.ttf" -exec cp {} "$WINEPREFIX/drive_c/windows/Fonts/" \; 2>/dev/null || true
+          find /usr/share/fonts -name "*.TTF" -exec cp {} "$WINEPREFIX/drive_c/windows/Fonts/" \; 2>/dev/null || true
           cp "${{ inputs.lesson }}.exe" "$WINEPREFIX/drive_c/lesson.exe"
           FILE_SIZE=$(wc -c < "$WINEPREFIX/drive_c/lesson.exe")
           echo "Lesson file size: $FILE_SIZE bytes"
