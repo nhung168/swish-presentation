@@ -94,30 +94,45 @@ jobs:
           until nc -z localhost 6080; do sleep 1; done
           echo "VNC and noVNC started."
 
-      - name: Start ngrok and print URL
+      - name: Create mobile viewer
         run: |
-          curl -sLo ngrok.tgz https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-amd64.tgz
-          tar xz -f ngrok.tgz
-          ./ngrok config add-authtoken ${{ secrets.NGROK_TOKEN }}
-          ./ngrok http 6080 --log /tmp/ngrok.log &
+          cat > /opt/novnc/mobile.html << 'HTMLEOF'
+          <!DOCTYPE html><html><head>
+          <meta charset="utf-8"/>
+          <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+          <title>SWiSH Presentation</title>
+          <style>html,body{margin:0;padding:0;width:100%;height:100%;background:#000;overflow:hidden}
+          canvas{display:block}</style></head><body>
+          <script type="module">
+          import RFB from '/core/rfb.js';
+          const url=(location.protocol==='https:'?'wss':'ws')+'://'+location.host;
+          const rfb=new RFB(document.body,url);
+          rfb.scaleViewport=true;rfb.resizeSession=false;
+          rfb.addEventListener('disconnect',()=>setTimeout(()=>location.reload(),3000));
+          </script></body></html>
+          HTMLEOF
+
+      - name: Start tunnel and print URL
+        run: |
+          curl -sLo cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+          chmod +x cloudflared
+          ./cloudflared tunnel --url http://localhost:6080 --no-autoupdate 2>/tmp/cf.log &
           URL=""
-          for i in $(seq 1 20); do
-            URL=$(curl -s http://127.0.0.1:4040/api/tunnels 2>/dev/null \
-              | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['tunnels'][0]['public_url'])" 2>/dev/null || true)
+          for i in $(seq 1 24); do
+            URL=$(grep -o 'https://[a-z0-9-]*\.trycloudflare\.com' /tmp/cf.log 2>/dev/null | head -1)
             [ -n "$URL" ] && break
-            sleep 2
+            sleep 5
           done
           if [ -z "$URL" ]; then
-            echo "ERROR: Could not get ngrok URL after 40 seconds."
-            cat /tmp/ngrok.log
+            echo "ERROR: Could not get Cloudflare URL."
+            cat /tmp/cf.log
             exit 1
           fi
           echo ""
           echo "============================================"
           echo "  Lesson: ${{ inputs.lesson }}"
-          echo "  Open this URL in any browser:"
           echo "  Desktop: $URL/vnc_lite.html?autoconnect=true"
-          echo "  Mobile:  $URL/vnc.html?autoconnect=true&resize=scale&reconnect=true"
+          echo "  Mobile:  $URL/mobile.html"
           echo "============================================"
           echo ""
 
