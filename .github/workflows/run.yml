@@ -10,6 +10,10 @@ on:
         required: true
         default: F7BD12
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   run:
     runs-on: ubuntu-22.04
@@ -125,5 +129,13 @@ jobs:
           echo "============================================"
           echo ""
 
-      - name: Keep session alive (up to 6 hours)
-        run: sleep 21600
+      - name: Keep session alive (6 hours) then restart
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sleep 21600
+          echo "Session ended — triggering next 6-hour batch..."
+          gh workflow run run.yml \
+            --repo ${{ github.repository }} \
+            --ref main \
+            --field lesson=${{ inputs.lesson || 'F7BD12' }}
