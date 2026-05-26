@@ -12,7 +12,7 @@ on:
 
 permissions:
   actions: write
-  contents: read
+  contents: write
 
 jobs:
   run:
@@ -106,6 +106,8 @@ jobs:
         run: cp mobile.html /opt/novnc/mobile.html
 
       - name: Start tunnel and print URL
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           curl -sLo cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
           chmod +x cloudflared
@@ -129,12 +131,68 @@ jobs:
           echo "============================================"
           echo ""
 
+          # Update session status JSON
+          LESSON="${{ inputs.lesson || 'F7BD12' }}"
+          TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          SESSION_JSON=$(cat <<EOF
+          {
+            "active": true,
+            "url": "$URL",
+            "lesson": "$LESSON",
+            "updated": "$TIMESTAMP"
+          }
+          EOF
+          )
+          CONTENT=$(echo -n "$SESSION_JSON" | base64 -w 0)
+
+          # Get current file SHA for update
+          SHA=$(gh api repos/${{ github.repository }}/contents/docs/current-session.json --jq '.sha' 2>/dev/null || echo "")
+
+          if [ -n "$SHA" ]; then
+            gh api repos/${{ github.repository }}/contents/docs/current-session.json \
+              --method PUT \
+              -f message="Update session status" \
+              -f content="$CONTENT" \
+              -f sha="$SHA" \
+              -f branch="main"
+          else
+            gh api repos/${{ github.repository }}/contents/docs/current-session.json \
+              --method PUT \
+              -f message="Update session status" \
+              -f content="$CONTENT" \
+              -f branch="main"
+          fi
+          echo "Session status updated."
+
       - name: Keep session alive (6 hours) then restart
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           sleep 21600
-          echo "Session ended — triggering next 6-hour batch..."
+          echo "Session ended — clearing status and triggering next 6-hour batch..."
+
+          # Clear session status JSON
+          CLEAR_JSON=$(cat <<EOF
+          {
+            "active": false,
+            "url": "",
+            "lesson": "",
+            "updated": ""
+          }
+          EOF
+          )
+          CONTENT=$(echo -n "$CLEAR_JSON" | base64 -w 0)
+          SHA=$(gh api repos/${{ github.repository }}/contents/docs/current-session.json --jq '.sha' 2>/dev/null || echo "")
+
+          if [ -n "$SHA" ]; then
+            gh api repos/${{ github.repository }}/contents/docs/current-session.json \
+              --method PUT \
+              -f message="Clear session status" \
+              -f content="$CONTENT" \
+              -f sha="$SHA" \
+              -f branch="main" 2>/dev/null || true
+          fi
+
           gh workflow run run.yml \
             --repo ${{ github.repository }} \
             --ref main \

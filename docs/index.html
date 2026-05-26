@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"/>
+  <title>SWiSH Presentation</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 500px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      text-align: center;
+    }
+
+    .status-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: #333;
+      font-size: 28px;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    .message {
+      color: #666;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .info-box {
+      background: #f5f5f5;
+      border-left: 4px solid #667eea;
+      padding: 16px;
+      margin: 24px 0;
+      text-align: left;
+      border-radius: 4px;
+    }
+
+    .info-box strong {
+      color: #333;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .info-box span {
+      color: #999;
+      font-size: 14px;
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .redirect-notice {
+      color: #999;
+      font-size: 14px;
+      margin-top: 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="main">
+    <div class="status-icon" id="icon">⏳</div>
+    <h1 id="title">Loading...</h1>
+    <div class="message" id="message">Checking for active session...</div>
+    <div class="spinner"></div>
+  </div>
+
+  <script>
+    const isMobile = () => {
+      return /iPhone|iPad|iPod|Android/.test(navigator.userAgent);
+    };
+
+    const fetchSessionData = async () => {
+      try {
+        // Fetch with cache-busting timestamp
+        const timestamp = Date.now();
+        const repoUrl = 'https://raw.githubusercontent.com/nhung168/swish-presentation/main/docs/current-session.json';
+        const response = await fetch(`${repoUrl}?v=${timestamp}`);
+
+        if (!response.ok) {
+          console.warn('Failed to fetch session data:', response.status);
+          return null;
+        }
+
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.warn('Error fetching session data:', error);
+        return null;
+      }
+    };
+
+    const formatTime = (dateString) => {
+      if (!dateString) return 'unknown time';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
+      } catch {
+        return dateString;
+      }
+    };
+
+    const showActive = (sessionData) => {
+      const container = document.getElementById('main');
+      container.innerHTML = `
+        <div class="status-icon">✅</div>
+        <h1>Session Active!</h1>
+        <div class="message">Redirecting to presentation viewer...</div>
+        <div class="spinner"></div>
+        <div class="redirect-notice">If not redirected in 3 seconds, click below to continue:</div>
+      `;
+
+      setTimeout(() => {
+        const mobile = isMobile();
+        const url = sessionData.url;
+        const path = mobile ? 'mobile.html' : 'vnc_lite.html';
+        const fullUrl = url.endsWith('/') ? `${url}${path}` : `${url}/${path}`;
+        window.location.href = fullUrl;
+      }, 1500);
+    };
+
+    const showOffline = (sessionData) => {
+      const container = document.getElementById('main');
+      const hasLastSession = sessionData && sessionData.lesson && sessionData.updated;
+
+      if (hasLastSession) {
+        container.innerHTML = `
+          <div class="status-icon">⏸️</div>
+          <h1>No Active Session</h1>
+          <div class="message">The presentation is not currently running.</div>
+          <div class="info-box">
+            <strong>Last Lesson:</strong>
+            <span>${sessionData.lesson}</span>
+            <br/>
+            <strong>Session Ended:</strong>
+            <span>${formatTime(sessionData.updated)}</span>
+          </div>
+          <div class="message" style="font-size: 14px; color: #999;">
+            Check back later or contact your instructor for the next session.
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="status-icon">🎥</div>
+          <h1>SWiSH Presentation</h1>
+          <div class="message">No active session at the moment.</div>
+          <div class="message" style="font-size: 14px; color: #999;">
+            Come back when the presentation is scheduled to start. The viewer will automatically open once the session begins.
+          </div>
+        `;
+      }
+    };
+
+    // Main flow
+    fetchSessionData().then(sessionData => {
+      if (sessionData && sessionData.active === true && sessionData.url) {
+        showActive(sessionData);
+      } else {
+        showOffline(sessionData);
+      }
+    });
+  </script>
+</body>
+</html>
