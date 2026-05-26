@@ -1,6 +1,8 @@
 name: Run SWiSH Presentation
 
 on:
+  schedule:
+    - cron: '0 1 * * 1-5'   # 8:00 AM Vietnam time (UTC+7), Mon–Fri
   workflow_dispatch:
     inputs:
       lesson:
@@ -57,7 +59,7 @@ jobs:
           mkdir -p "$WINEPREFIX/drive_c/windows/Fonts"
           find /usr/share/fonts -name "*.ttf" -exec cp {} "$WINEPREFIX/drive_c/windows/Fonts/" \; 2>/dev/null || true
           find /usr/share/fonts -name "*.TTF" -exec cp {} "$WINEPREFIX/drive_c/windows/Fonts/" \; 2>/dev/null || true
-          cp "${{ inputs.lesson }}.exe" "$WINEPREFIX/drive_c/lesson.exe"
+          cp "${{ inputs.lesson || 'F7BD12' }}.exe" "$WINEPREFIX/drive_c/lesson.exe"
           FILE_SIZE=$(wc -c < "$WINEPREFIX/drive_c/lesson.exe")
           echo "Lesson file size: $FILE_SIZE bytes"
           if [ "$FILE_SIZE" -lt 1000000 ]; then
@@ -117,7 +119,7 @@ jobs:
           fi
           echo ""
           echo "============================================"
-          echo "  Lesson: ${{ inputs.lesson }}"
+          echo "  Lesson: ${{ inputs.lesson || 'F7BD12' }}"
           echo "  Desktop: $URL/vnc_lite.html?autoconnect=true"
           echo "  Mobile:  $URL/mobile.html"
           echo "============================================"
