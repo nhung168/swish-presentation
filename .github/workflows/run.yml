@@ -2,7 +2,7 @@ name: Run SWiSH Presentation
 
 on:
   schedule:
-    - cron: '15 1,7,13,19 * * *'   # Every 6 hours, anchored to 14:15 Vietnam time (UTC+7)
+    - cron: '25 1,7,13,19 * * *'   # Every 6 hours, anchored to 14:15 Vietnam time (UTC+7)
   workflow_dispatch:
     inputs:
       lesson:
